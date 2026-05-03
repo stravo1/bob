@@ -12,7 +12,7 @@ A command-line tool for syncing and managing pages between your local workspace 
 ## Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/stravo1/bob
 cd bob
 npm install
 npm run build
@@ -40,7 +40,7 @@ The tool uses a `config.json` file to store connection settings:
 Set up a new local workspace by connecting to your Frappe server and syncing all pages.
 
 ```bash
-builder-cli init --site-name <name> --site-url <url> --token <token> [options]
+bob init --site-name <name> --site-url <url> --token <token> [options]
 ```
 
 **Options:**
@@ -53,7 +53,7 @@ builder-cli init --site-name <name> --site-url <url> --token <token> [options]
 
 **Example:**
 ```bash
-builder-cli init --site-name "My Site" --site-url "https://frappe.example.com" --token "your_token_here"
+bob init --site-name "sample.m.frappe.cloud" --site-url "https://sample.m.frappe.cloud" --token "key:secret"
 ```
 
 ### `watch` - Sync Changes in Real-time
@@ -61,7 +61,7 @@ builder-cli init --site-name "My Site" --site-url "https://frappe.example.com" -
 Monitor local files and server changes, syncing updates bidirectionally in real-time.
 
 ```bash
-builder-cli watch
+bob watch
 ```
 
 This command:
@@ -75,7 +75,7 @@ This command:
 Manually pull the latest pages and data from the server.
 
 ```bash
-builder-cli pull
+bob pull
 ```
 
 This will:
@@ -88,7 +88,7 @@ This will:
 Push your local changes to the remote server.
 
 ```bash
-builder-cli push
+bob push
 ```
 
 ## Usage Examples
@@ -98,28 +98,28 @@ builder-cli push
 1. **Initialize a new workspace:**
    ```bash
    cd my-workspace
-   builder-cli init \
-     --site-name "Production" \
-     --site-url "https://erp.company.com" \
-     --token "token_xyz123"
+   bob init \
+     --site-name "sample.m.frappe.cloud" \
+     --site-url "https://sample.m.frappe.cloud" \
+     --token "key:secret"
    ```
 
 2. **Start watching for changes:**
    ```bash
-   builder-cli watch
+   bob watch
    ```
 
 3. **Make changes locally** in the `pages/` directory, and they'll automatically sync to the server.
 
 4. **Manually pull updates:**
    ```bash
-   builder-cli pull
+   bob pull
    ```
 
 ## Project Structure
 
 ```
-builder-cli/
+bob/
 ├── src/
 │   ├── commands/          # CLI command implementations
 │   │   ├── init.ts       # Initialize workspace
