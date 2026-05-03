@@ -9,8 +9,8 @@ import { pushCommand } from "./commands/push";
 const program = new Command();
 
 program
-  .name("builder-cli")
-  .description("Builder CLI")
+  .name("bob")
+  .description("A CLI tool to sync Builder pages with local files")
   .version("0.0.1");
 
 program.addCommand(initCommand);
