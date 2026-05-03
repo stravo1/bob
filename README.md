@@ -136,7 +136,6 @@ bob/
 │   │   └── logger.ts     # Logging utilities
 │   ├── global.d.ts       # Global type definitions
 │   └── index.ts          # CLI entry point
-├── config.json           # Configuration file (created by init)
 ├── package.json          # Dependencies and scripts
 └── tsconfig.json         # TypeScript configuration
 ```
