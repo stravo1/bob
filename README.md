@@ -26,9 +26,9 @@ The tool uses a `config.json` file to store connection settings:
 
 ```json
 {
-  "siteUrl": "https://your-frappe-site.com",
-  "siteName": "your-site-name",
-  "authToken": "your-authentication-token",
+  "siteUrl": "https://sample.m.frappe.cloud",
+  "siteName": "sample.m.frappe.cloud",
+  "authToken": "key:secret",
   "socketioPort": 3000
 }
 ```
