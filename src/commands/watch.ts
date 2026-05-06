@@ -7,11 +7,10 @@ import FrappeClient from "../lib/frappeClient";
 import writePage from "../lib/writePage";
 import path from "path";
 import buildPage from "../lib/buildPage";
+import { statSync } from "fs";
+import { pull } from "./pull";
 
 const CONFIG_FILE = "config.json";
-
-global.lastSyncTimestamp = "";
-global.socketId = "";
 
 const watchLocalChanges = (client: FrappeClient) => {
     const WATCH_PATH = ".";
@@ -39,6 +38,7 @@ const watchLocalChanges = (client: FrappeClient) => {
         )
         .on("change", async (p) => {
             console.log(`[CHANGE] ${p}`);
+
             const pwd = process.cwd();
             const isChangeInPages = p.startsWith("pages/");
             if (!isChangeInPages) {
@@ -47,13 +47,33 @@ const watchLocalChanges = (client: FrappeClient) => {
                 );
                 return;
             }
-            const pageDir = path.resolve(`${pwd}/${p.match(/^(pages\/[^\/]+\/)/)![0]}`);
+
+            const pageDir = path.resolve(
+                `${pwd}/${p.match(/^(pages\/[^\/]+\/)/)![0]}`,
+            );
+
             if (pageDir) {
+                const fileMtime = statSync(p).mtime.getTime();
+                const storedMtime = readFile(`${pageDir}/.last_modified`);
+                if (!storedMtime) {
+                    console.warn(
+                        `No stored modification time found for ${pageDir}. This might be a new page or the .last_modified file is missing. Skipping update.`,
+                    );
+                    return;
+                }
+
+                const serverMtime = new Date(storedMtime.trim()).getTime();
+
+                if (fileMtime <= serverMtime) {
+                    console.log(
+                        `No local changes detected for ${pageDir} since last sync. Skipping update to server.`,
+                    );
+                    return;
+                }
                 const { pageData, headHtml, bodyHtml, dataScript, blocks } =
                     await buildPage(pageDir);
                 const pageName: string = pageData.name as string;
                 if (pageName) {
-                    
                     const updateMap: Record<string, unknown> = {};
                     if (headHtml !== null) {
                         updateMap.head_html = headHtml;
@@ -68,10 +88,13 @@ const watchLocalChanges = (client: FrappeClient) => {
                         updateMap.draft_blocks = JSON.stringify(blocks);
                     }
                     updateMap.custom_last_sync_client = global.socketId;
-                    
-                    let pageDetails = await client.updatePage(pageName, updateMap);
-                    
-                    global.lastSyncTimestamp = pageDetails.modified;
+
+                    await client.updatePage(
+                        pageName,
+                        updateMap,
+                        storedMtime,
+                    );
+
                     console.log(`Updated page: ${pageName} successfully!`);
                 } else {
                     console.error(
@@ -88,17 +111,15 @@ const watchRemoteChanges = (config: any, client: FrappeClient) => {
     let secure = urlObject.protocol === "https:";
     if (config.socketioPort) {
         urlObject.port = config.socketioPort;
-        url = urlObject.toString();
-    } else {
-        url = urlObject.toString();
     }
-    url = `${urlObject.toString()}${urlObject.hostname}`;
+    url = `${urlObject.toString()}${config.siteName}`;
+    console.log(`Connecting to Socket.IO server at ${url}...`);
 
     const socket = io(url, {
         withCredentials: true,
         secure: secure,
         extraHeaders: {
-            origin: url,
+            origin: config.siteUrl,
             Authorization: `token ${config.authToken}`,
         },
     });
@@ -128,7 +149,10 @@ const watchRemoteChanges = (config: any, client: FrappeClient) => {
     });
 
     socket.on("list_update", (page) => {
-        log("response", `Document updated: ${c.bold}${page.name}${c.reset}`);
+        log(
+            "response",
+            `Document update received: ${c.bold}${page.name}${c.reset}`,
+        );
         writePage(client, page);
     });
 };
@@ -137,7 +161,9 @@ export const watchCommand = new Command("watch")
     .description(
         "Watch for local and server changes, sync updates in real time, and manage Git merges automatically.",
     )
-    .action(() => {
+    .option("--only-local", "Watch only local file changes and sync to server")
+    .option("--only-remote", "Watch only remote changes and sync to local")
+    .action(async (options) => {
         console.log("Watching for changes...");
         const config = readFile(CONFIG_FILE);
         if (!config) {
@@ -160,9 +186,15 @@ export const watchCommand = new Command("watch")
             }
             log("response", `${c.green}✓ Connection successful${c.reset}`);
         });
-        watchRemoteChanges(
-            { siteUrl, authToken, socketioPort, siteName },
-            client,
-        );
-        watchLocalChanges(client);
+        if (!options.onlyLocal) {
+            console.log("Setting up remote watcher...");
+            await pull(client);
+            watchRemoteChanges(
+                { siteUrl, authToken, socketioPort, siteName },
+                client,
+            );
+        }
+        if (!options.onlyRemote) {
+            watchLocalChanges(client);
+        }
     });

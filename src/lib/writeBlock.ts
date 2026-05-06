@@ -1,14 +1,16 @@
-import { existsSync } from "fs";
+import { existsSync, statSync } from "fs";
 import { deleteDir, makeDir, readDir, writeFile } from "../utils/file";
+import { safeFileName } from "../utils/misc";
 
 const writeBlock = async (
-    block: Record<string, unknown>,
+    block: Record<string, any>,
     outputDir: string,
+    serverMtime?: string,
 ) => {
     const dirName =
         block.blockId == "root"
             ? `${outputDir}/root`
-            : `${outputDir}/${block.blockName || block.element || "unnamed"}_${block.blockId}`;
+            : `${outputDir}/${safeFileName(block.blockName || block.element || "unnamed")}_${block.blockId}`;
     const clientScript = block.blockClientScript as string;
     const dataScript = block.blockDataScript as string;
 
@@ -18,42 +20,38 @@ const writeBlock = async (
 
     if (clientScript) {
         const clientScriptPath = `${dirName}/client_script.js`;
-        writeFile(clientScriptPath, clientScript);
+        writeFile(clientScriptPath, clientScript, serverMtime);
     }
     if (dataScript) {
         const dataScriptPath = `${dirName}/data_script.py`;
-        writeFile(dataScriptPath, dataScript);
+        writeFile(dataScriptPath, dataScript, serverMtime);
     }
 
     const children = block.children as Record<string, unknown>[];
     if (children && children.length > 0) {
         for (const child of children) {
-            await writeBlock(child, dirName);
+            await writeBlock(child, dirName, serverMtime);
         }
     }
     // delete blockDirs which are not present in the children list
     // get list of blockDirs in the output directory
-    if ((block.children as Record<string, unknown>[]).length > 0) {
+    if ((block.children as Record<string, unknown>[] || []).length > 0) {
         const path = await import("path");
         const blockDirs = readDir(dirName);
         for (const blockDir of blockDirs) {
             // const blockName = blockDir.split("_").slice(-1)[0];
-            console.log(
-                "Checking block directory:",
-                blockDir,
-                "against children:",
-                children,
-            );
+            const fullPath = path.join(dirName, blockDir);
             if (
                 !children.some(
                     (child: any) =>
-                        `${child.blockName || child.element || "unnamed"}_${child.blockId}` ===
+                        safeFileName(`${child.blockName || child.element || "unnamed"}_${child.blockId}`) ===
                         blockDir,
-                )
+                ) &&
+                statSync(fullPath).isDirectory()
             ) {
-                deleteDir(path.join(dirName, blockDir));
+                deleteDir(fullPath);
                 console.log(
-                    `Deleted local directory for removed block: ${blockDir}`,
+                    `Deletedd local directory for removed block: ${blockDir}`,
                 );
             }
         }
@@ -69,7 +67,7 @@ const writeBlock = async (
     delete block.blockDataScript;
 
     const blockDataPath = `${dirName}/block.json`;
-    writeFile(blockDataPath, JSON.stringify(block, null, 2));
+    writeFile(blockDataPath, JSON.stringify(block, null, 2), serverMtime);
 };
 
 export default writeBlock;

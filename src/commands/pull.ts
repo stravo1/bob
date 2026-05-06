@@ -3,6 +3,7 @@ import FrappeClient from "../lib/frappeClient";
 import writePage from "../lib/writePage";
 import { existsSync } from "fs";
 import { deleteDir, readDir, readFile } from "../utils/file";
+import { safeFileName } from "../utils/misc";
 
 const CONFIG_FILE = "config.json";
 
@@ -19,7 +20,7 @@ export const pull = async (client: FrappeClient) => {
         if (existsSync(outputDir)) {
             const pageDirs = readDir(outputDir);
             for (const pageDir of pageDirs) {
-                if (!pages.some((page: any) => `${page.name || page.element || "unnamed"}_${page.pageId}` === pageDir)) {
+                if (!pages.some((page: any) => safeFileName(`${page.name || page.element || "unnamed"}_${page.pageId}`) === pageDir)) {
                     deleteDir(path.join(outputDir, pageDir));
                     console.log(
                         `Deleted local directory for removed page: ${pageDir}`,
