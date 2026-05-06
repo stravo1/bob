@@ -1,10 +1,10 @@
 import { Command } from "commander";
 import { confirm } from "@inquirer/prompts";
-import FrappeClient from "../lib/frappeClient";
+import FrappeClient from "../utils/frappeClient";
 import { readFile, writeFile } from "../utils/file";
 import { logger } from "../utils/logger";
 import { pull } from "./pull";
-import { generateGitIgnore } from "../lib/generateGitIgnore";
+import { generateGitIgnore } from "../services/generateGitIgnore";
 
 const CONFIG_FILE = "config.json";
 

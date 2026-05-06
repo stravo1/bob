@@ -1,5 +1,5 @@
 import { makeDir, writeFile, fileExists } from "../utils/file";
-import FrappeClient from "./frappeClient";
+import FrappeClient from "../utils/frappeClient";
 import writeBlock from "./writeBlock";
 import { safeFileName } from "../utils/misc";
 import { logger } from "../utils/logger";

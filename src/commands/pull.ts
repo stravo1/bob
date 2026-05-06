@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import FrappeClient from "../lib/frappeClient";
-import writePage from "../lib/writePage";
+import FrappeClient from "../utils/frappeClient";
+import writePage from "../services/writePage";
 import { deleteDir, readDir, readFile, fileExists } from "../utils/file";
 import { logger } from "../utils/logger";
 import path from "path";
