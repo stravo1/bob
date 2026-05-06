@@ -1,6 +1,6 @@
 # bob - Builder CLI
 
-A command-line tool for syncing and managing pages between your local workspace and a Frappe/ERPNext server. This tool enables real-time synchronization, local file watching, and seamless collaboration with remote server changes.
+A command-line tool for syncing and managing frappe/builder pages between your local workspace and a Frappe server. This tool enables real-time synchronization, local file watching, and seamless collaboration with remote server changes.
 
 ## Features
 
@@ -136,7 +136,6 @@ bob/
 │   │   └── logger.ts     # Logging utilities
 │   ├── global.d.ts       # Global type definitions
 │   └── index.ts          # CLI entry point
-├── config.json           # Configuration file (created by init)
 ├── package.json          # Dependencies and scripts
 └── tsconfig.json         # TypeScript configuration
 ```
