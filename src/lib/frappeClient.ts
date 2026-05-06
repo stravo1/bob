@@ -1,3 +1,5 @@
+import { logger } from "../utils/logger";
+
 class FrappeClient {
     siteUrl: string;
     authToken: string;
@@ -20,16 +22,14 @@ class FrappeClient {
                 },
             );
             if (!response.ok) {
-                console.error(
-                    response.status,
-                    response.statusText ||
-                        "Unknown error occurred while testing connection",
+                logger.error(
+                    `${response.status} ${response.statusText || "Unknown error occurred while testing connection"}`,
                 );
                 return false;
             }
             return response.ok;
         } catch (error) {
-            console.error("Error occurred while testing connection:", error);
+            logger.error("Error occurred while testing connection:", error);
             return false;
         }
     }
@@ -48,12 +48,12 @@ class FrappeClient {
             );
             this.hasCliSaveEndpoint = response.ok;
             if (!response.ok) {
-                console.warn(
+                logger.warn(
                     `CLI save endpoint test returned status ${response.status}. CLI save functionality will be disabled.`,
                 );
             }
         } catch (error) {
-            console.warn(
+            logger.warn(
                 `Error occurred while testing CLI save endpoint: ${error}. CLI save functionality will be disabled.`,
             );
             this.hasCliSaveEndpoint = false;
@@ -71,16 +71,14 @@ class FrappeClient {
                 },
             );
             if (!response.ok) {
-                console.error(
-                    response.status,
-                    response.statusText ||
-                        "Unknown error occurred while fetching pages",
+                logger.error(
+                    `${response.status} ${response.statusText || "Unknown error occurred while fetching pages"}`,
                 );
                 return [];
             }
             return (await response.json()).data;
         } catch (error) {
-            console.error("Error occurred while fetching pages:", error);
+            logger.error("Error occurred while fetching pages:", error);
             return [];
         }
     }
@@ -98,10 +96,8 @@ class FrappeClient {
                 },
             );
             if (!response.ok) {
-                console.error(
-                    response.status,
-                    response.statusText ||
-                        "Unknown error occurred while fetching page details",
+                logger.error(
+                    `${response.status} ${response.statusText || "Unknown error occurred while fetching page details"}`,
                 );
                 return null;
             }
@@ -115,7 +111,7 @@ class FrappeClient {
             }
             return (await response.json()).data;
         } catch (error) {
-            console.error("Error occurred while fetching page details:", error);
+            logger.error("Error occurred while fetching page details:", error);
             return null;
         }
     }
@@ -139,7 +135,7 @@ class FrappeClient {
                     last_known_server_mtime: lastModified,
                 };
             } else {
-                console.warn(
+                logger.warn(
                     "CLI save endpoint not available. Falling back to standard resource update. This may cause conflicts if the page was modified on the server since last fetch.",
                 );
                 body = updateMap;
@@ -153,17 +149,15 @@ class FrappeClient {
                 body: JSON.stringify(body),
             });
             if (!response.ok) {
-                console.log(JSON.stringify(response));
-                console.error(
-                    response.status,
-                    response.statusText ||
-                        "Unknown error occurred while updating page",
+                logger.debug(JSON.stringify(response));
+                logger.error(
+                    `${response.status} ${response.statusText || "Unknown error occurred while updating page"}`,
                 );
                 return null;
             }
             return (await response.json()).data;
         } catch (error) {
-            console.error("Error occurred while updating page:", error);
+            logger.error("Error occurred while updating page:", error);
             return null;
         }
     }

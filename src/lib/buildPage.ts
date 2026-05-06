@@ -1,5 +1,4 @@
-import { existsSync, readdirSync } from "fs";
-import { readFile } from "../utils/file";
+import { readFile, fileExists, readDir } from "../utils/file";
 
 interface Block extends Record<string, unknown> {
     blockId: string;
@@ -28,9 +27,9 @@ const buildPage = async (pageDir: string): Promise<Page> => {
     const bodyHtmlPath = `${pageDir}/body.html`;
     const dataScriptPath = `${pageDir}/data_script.py`;
 
-    const headHtml = existsSync(headHtmlPath) ? readFile(headHtmlPath) : null;
-    const bodyHtml = existsSync(bodyHtmlPath) ? readFile(bodyHtmlPath) : null;
-    const dataScript = existsSync(dataScriptPath)
+    const headHtml = fileExists(headHtmlPath) ? readFile(headHtmlPath) : null;
+    const bodyHtml = fileExists(bodyHtmlPath) ? readFile(bodyHtmlPath) : null;
+    const dataScript = fileExists(dataScriptPath)
         ? readFile(dataScriptPath)
         : null;
 
@@ -54,17 +53,14 @@ const buildPage = async (pageDir: string): Promise<Page> => {
             for (const childId of childrenIds) {
                 // Try to find the child directory
                 // The directory naming pattern is: {blockName}_{blockId} or just root
-                const potentialDirs = readdirSync(blockDir, {
-                    withFileTypes: true,
-                }).filter(
-                    (entry) =>
-                        entry.isDirectory() &&
-                        entry.name.endsWith(`_${childId}`),
+                const allEntries = readDir(blockDir);
+                const potentialDirs = allEntries.filter(
+                    (entry) => entry.endsWith(`_${childId}`),
                 );
 
                 if (potentialDirs.length > 0) {
                     const childBlock = readBlocksRecursively(
-                        `${blockDir}/${potentialDirs[0].name}`,
+                        `${blockDir}/${potentialDirs[0]}`,
                     );
                     if (childBlock) {
                         children.push(childBlock);
@@ -80,13 +76,13 @@ const buildPage = async (pageDir: string): Promise<Page> => {
 
         // Read client script if exists
         const clientScriptPath = `${blockDir}/client_script.js`;
-        if (existsSync(clientScriptPath)) {
+        if (fileExists(clientScriptPath)) {
             block.blockClientScript = readFile(clientScriptPath);
         }
 
         // Read data script if exists
         const dataScriptBlockPath = `${blockDir}/data_script.py`;
-        if (existsSync(dataScriptBlockPath)) {
+        if (fileExists(dataScriptBlockPath)) {
             block.blockDataScript = readFile(dataScriptBlockPath);
         }
 
@@ -94,7 +90,7 @@ const buildPage = async (pageDir: string): Promise<Page> => {
     };
 
     // Read all blocks starting from root
-    if (existsSync(blocksDir)) {
+    if (fileExists(blocksDir)) {
         const rootBlock = readBlocksRecursively(blocksDir);
         if (rootBlock) {
             blocks.push(rootBlock);

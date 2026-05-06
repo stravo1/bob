@@ -1,24 +1,30 @@
 import { Command } from "commander";
 import { io } from "socket.io-client";
 import { readFile } from "../utils/file";
-import { log, c } from "../utils/logger";
+import { logger, log, c } from "../utils/logger";
 import chokidar from "chokidar";
 import FrappeClient from "../lib/frappeClient";
 import writePage from "../lib/writePage";
 import path from "path";
 import buildPage from "../lib/buildPage";
-import { statSync } from "fs";
+import { getFileStats } from "../utils/file";
 import { pull } from "./pull";
 
 const CONFIG_FILE = "config.json";
 
 const watchLocalChanges = (client: FrappeClient) => {
-    const WATCH_PATH = ".";
+    const WATCH_PATHS = ["pages", "components", "globals"];
 
-    const watcher = chokidar.watch(WATCH_PATH, {
+    const watcher = chokidar.watch(WATCH_PATHS, {
         persistent: true,
         ignoreInitial: true, // don't fire for existing files on startup
-        ignored: /(^|[\/\\])\../, // ignore dotfiles
+        ignored: [
+            /(^|[\/\\])\../, // ignore dotfiles
+            /\.log$/i,
+            /\.json$/i,
+            /\.tmp$/i,
+            /\.DS_Store/,
+        ],
         awaitWriteFinish: {
             stabilityThreshold: 200, // wait 200ms after last change before firing
             pollInterval: 100,
@@ -28,21 +34,23 @@ const watchLocalChanges = (client: FrappeClient) => {
     const abs = (filePath: string) => path.resolve(filePath);
 
     watcher
-        .on("add", (p) => console.log(`[ADD]    ${abs(p)}`))
-        .on("unlink", (p) => console.log(`[DELETE] ${abs(p)}`))
-        .on("addDir", (p) => console.log(`[MKDIR]  ${abs(p)}`))
-        .on("unlinkDir", (p) => console.log(`[RMDIR]  ${abs(p)}`))
-        .on("error", (e) => console.error(`[ERROR]  ${e}`))
+        .on("add", (p) => logger.info(`[ADD]    ${abs(p)}`))
+        .on("unlink", (p) => logger.info(`[DELETE] ${abs(p)}`))
+        .on("addDir", (p) => logger.info(`[MKDIR]  ${abs(p)}`))
+        .on("unlinkDir", (p) => logger.info(`[RMDIR]  ${abs(p)}`))
+        .on("error", (e) => logger.error(`[ERROR]  ${e}`))
         .on("ready", () =>
-            console.log(`Watching: ${path.resolve(WATCH_PATH)}\n`),
+            logger.info(
+                `Watching: ${WATCH_PATHS.map((p) => path.resolve(p)).join(", ")}\n`,
+            ),
         )
         .on("change", async (p) => {
-            console.log(`[CHANGE] ${p}`);
+            logger.info(`[CHANGE] ${p}`);
 
             const pwd = process.cwd();
             const isChangeInPages = p.startsWith("pages/");
             if (!isChangeInPages) {
-                console.log(
+                logger.info(
                     `Change detected in ${p}, but it's outside the pages directory. Ignoring.`,
                 );
                 return;
@@ -53,7 +61,7 @@ const watchLocalChanges = (client: FrappeClient) => {
             );
 
             if (pageDir) {
-                const fileMtime = statSync(p).mtime.getTime();
+                const fileMtime = getFileStats(p)?.mtime.getTime() || 0;
                 const storedMtime = readFile(`${pageDir}/.last_modified`);
                 if (!storedMtime) {
                     console.warn(
@@ -89,11 +97,7 @@ const watchLocalChanges = (client: FrappeClient) => {
                     }
                     updateMap.custom_last_sync_client = global.socketId;
 
-                    await client.updatePage(
-                        pageName,
-                        updateMap,
-                        storedMtime,
-                    );
+                    await client.updatePage(pageName, updateMap, storedMtime);
 
                     console.log(`Updated page: ${pageName} successfully!`);
                 } else {
@@ -126,33 +130,26 @@ const watchRemoteChanges = (config: any, client: FrappeClient) => {
     socket.on("connect", () => {
         log(
             "response",
-            `${c.green}✓ Connected${c.reset} — Socket ID: ${c.bold}${socket.id}${c.reset}`,
+            `[CONNECTED] Socket ID: ${c.bold}${socket.id}${c.reset}`,
         );
         global.socketId = socket.id!;
         socket?.emit("doctype_subscribe", "Builder Page");
     });
 
     socket.on("disconnect", (reason) => {
-        log("error", `✗ Disconnected — reason: ${reason}`);
+        log("error", `[DISCONNECTED] ${reason}`);
     });
 
     socket.on("connect_error", (err) => {
-        log("error", `Connection error: ${err.message}`);
+        log("error", `[CONNECTION ERROR] ${err.message}`);
     });
 
     socket.on("error", (err) => {
-        log("error", `Socket error: ${err}`);
-    });
-
-    socket.on("joined", (room) => {
-        console.log(`Joined room: ${room}`);
+        log("error", `[SOCKET ERROR] ${err}`);
     });
 
     socket.on("list_update", (page) => {
-        log(
-            "response",
-            `Document update received: ${c.bold}${page.name}${c.reset}`,
-        );
+        log("response", `[PAGE UPDATE] ${c.bold}${page.name}${c.reset}`);
         writePage(client, page);
     });
 };

@@ -1,5 +1,4 @@
-import { existsSync } from "fs";
-import { makeDir, writeFile } from "../utils/file";
+import { makeDir, writeFile, fileExists } from "../utils/file";
 import FrappeClient from "./frappeClient";
 import writeBlock from "./writeBlock";
 import { safeFileName } from "../utils/misc";
@@ -31,7 +30,7 @@ const writePage = async (
 
 
         // check if pageDir already exists, create if not
-        if (!existsSync(pageDir)) {
+        if (!fileExists(pageDir)) {
             makeDir(pageDir);
         }
 

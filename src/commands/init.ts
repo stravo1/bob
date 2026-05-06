@@ -1,15 +1,14 @@
 import { Command } from "commander";
 import { confirm } from "@inquirer/prompts";
-import { writeFileSync, readFileSync, existsSync } from "fs";
 import FrappeClient from "../lib/frappeClient";
-import writePage from "../lib/writePage";
-import { deleteDir, readDir } from "../utils/file";
+import { readFile, writeFile, } from "../utils/file";
+import { logger } from "../utils/logger";
 import { pull } from "./pull";
 
 const CONFIG_FILE = "config.json";
 
 const displayConfig = (config: Record<string, any>) => {
-    console.log(JSON.stringify(config, null, 2));
+    logger.info(JSON.stringify(config, null, 2));
 };
 
 export const initCommand = new Command("init")
@@ -37,10 +36,10 @@ export const initCommand = new Command("init")
 
         try {
             const existingConfig = JSON.parse(
-                readFileSync(CONFIG_FILE, "utf-8"),
+                readFile(CONFIG_FILE) || "{}",
             );
 
-            console.log("Existing configuration:");
+            logger.info("Existing configuration:");
             displayConfig(existingConfig);
 
             let overwrite = false;
@@ -55,7 +54,7 @@ export const initCommand = new Command("init")
                 overwrite = true;
             }
             if (!overwrite) {
-                console.log("Initialization cancelled.");
+                logger.info("Initialization cancelled.");
                 return;
             }
         } catch {
@@ -71,9 +70,9 @@ export const initCommand = new Command("init")
             newConfig.socketioPort = options.socketioPort;
         }
 
-        writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2));
+        writeFile(CONFIG_FILE, JSON.stringify(newConfig, null, 2));
 
-        console.log("New configuration:");
+        logger.info("New configuration:");
         displayConfig(newConfig);
 
         const client = new FrappeClient(site_url, options.token);
@@ -86,5 +85,5 @@ export const initCommand = new Command("init")
             );
             return;
         }
-        pull(client);
+        await pull(client);
     });

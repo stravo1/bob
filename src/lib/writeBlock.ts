@@ -1,5 +1,4 @@
-import { existsSync, statSync } from "fs";
-import { deleteDir, makeDir, readDir, writeFile } from "../utils/file";
+import { deleteDir, makeDir, readDir, writeFile, fileExists, getFileStats } from "../utils/file";
 import { safeFileName } from "../utils/misc";
 
 const writeBlock = async (
@@ -14,7 +13,7 @@ const writeBlock = async (
     const clientScript = block.blockClientScript as string;
     const dataScript = block.blockDataScript as string;
 
-    if (!existsSync(dirName)) {
+    if (!fileExists(dirName)) {
         makeDir(dirName);
     }
 
@@ -47,7 +46,7 @@ const writeBlock = async (
                         safeFileName(`${child.blockName || child.element || "unnamed"}_${child.blockId}`) ===
                         blockDir,
                 ) &&
-                statSync(fullPath).isDirectory()
+                getFileStats(fullPath)?.isDirectory()
             ) {
                 deleteDir(fullPath);
                 console.log(

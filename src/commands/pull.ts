@@ -1,8 +1,8 @@
 import { Command } from "commander";
 import FrappeClient from "../lib/frappeClient";
 import writePage from "../lib/writePage";
-import { existsSync } from "fs";
-import { deleteDir, readDir, readFile } from "../utils/file";
+import { deleteDir, readDir, readFile, fileExists } from "../utils/file";
+import { logger } from "../utils/logger";
 import { safeFileName } from "../utils/misc";
 
 const CONFIG_FILE = "config.json";
@@ -17,29 +17,29 @@ export const pull = async (client: FrappeClient) => {
         // get list of pageDirs in the output directory
         const path = await import("path");
         const outputDir = path.join(process.cwd(), "pages");
-        if (existsSync(outputDir)) {
+        if (fileExists(outputDir)) {
             const pageDirs = readDir(outputDir);
             for (const pageDir of pageDirs) {
                 if (!pages.some((page: any) => safeFileName(`${page.name || page.element || "unnamed"}_${page.pageId}`) === pageDir)) {
                     deleteDir(path.join(outputDir, pageDir));
-                    console.log(
+                    logger.info(
                         `Deleted local directory for removed page: ${pageDir}`,
                     );
                 }
             }
         }
     } catch (error) {
-        console.error("Error occurred while fetching pages:", error);
+        logger.error("Error occurred while fetching pages:", error);
     }
 };
 
 export const pullCommand = new Command("pull")
     .description("Manually pull latest data from site")
     .action(() => {
-        console.log("Pulling...");
+        logger.info("Pulling...");
         const pwd = process.cwd();
         const config = JSON.parse(
-            existsSync(CONFIG_FILE) ? readFile(CONFIG_FILE) || "{}" : "{}",
+            fileExists(CONFIG_FILE) ? readFile(CONFIG_FILE) || "{}" : "{}",
         );
         const client = new FrappeClient(config.siteUrl, config.authToken);
         pull(client);
