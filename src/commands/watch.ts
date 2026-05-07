@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { io } from "socket.io-client";
-import { readFile } from "../utils/file";
+import { readDir, readFile } from "../utils/file";
 import { logger, c } from "../utils/logger";
 import chokidar from "chokidar";
 import FrappeClient from "../utils/frappeClient";
@@ -8,6 +8,7 @@ import path from "node:path";
 import { pull } from "./pull";
 import { PushQueue } from "../queues/PushQueue";
 import { PullQueue } from "../queues/PullQueue";
+import { addBlockData } from "../services/addBlockData";
 
 const CONFIG_FILE = "config.json";
 
@@ -61,9 +62,7 @@ const watchLocalChanges = (client: FrappeClient, debounceDelay: number) => {
 
             // Only process changes to files within the pages directory
             if (isChangeInPages) {
-                logger.info(
-                    `Page: Change detected in ${p}.`,
-                );
+                logger.info(`Page: Change detected in ${p}.`);
                 const pageDir = path.resolve(
                     `${pwd}/${p.match(/^(pages\/[^\/]+\/)/)![0]}`,
                 );
@@ -76,9 +75,7 @@ const watchLocalChanges = (client: FrappeClient, debounceDelay: number) => {
             }
 
             if (isChangeInComponents) {
-                logger.info(
-                    `Component: Change detected in ${p}.`,
-                );
+                logger.info(`Component: Change detected in ${p}.`);
                 const componentDir = path.resolve(
                     `${pwd}/${p.match(/^(components\/[^\/]+\/)/)![0]}`,
                 );
@@ -125,11 +122,13 @@ const watchRemoteChanges = (
             Authorization: `token ${config.authToken}`,
         },
     });
-    socket.on("connect", () => {
+    socket.on("connect", async () => {
         logger.info(`[CONNECTED] Socket ID: ${c.bold}${socket.id}${c.reset}`);
         global.socketId = socket.id!;
+        await pull(client);
         socket?.emit("doctype_subscribe", "Builder Page");
         socket?.emit("doctype_subscribe", "Builder Component");
+        socket?.emit("request:block_data");
     });
 
     socket.on("disconnect", (reason) => {
@@ -156,6 +155,19 @@ const watchRemoteChanges = (
                 `Received list_update for unhandled doctype: ${document.doctype}`,
             );
         }
+    });
+
+    socket.on("block_data_update", (data) => {
+        logger.info(`Received block_data_update for page ID: ${data.pageId}`); // Log the page ID
+        const pwd = process.cwd();
+        const allEntries = readDir(`${pwd}/pages`);
+        const potentialDirs = allEntries.filter((entry) =>
+            entry.endsWith(`_${data.pageId}`),
+        );
+        if (potentialDirs.length > 0) {
+            addBlockData(`${pwd}/pages/${potentialDirs[0]}`, data.blockDataMap);
+        }
+        logger.info(`Block data update processed for page ID: ${data.pageId}`); // Log after processing
     });
 };
 
@@ -197,7 +209,6 @@ export const watchCommand = new Command("watch")
         });
         if (!options.onlyLocal) {
             // sync remote changes to local before starting to watch for changes
-            await pull(client);
             watchRemoteChanges(
                 { siteUrl, authToken, socketioPort, siteName },
                 client,
